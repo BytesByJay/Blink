@@ -9,6 +9,8 @@ abstract class Notifier {
       {required bool sound, required bool vibration});
   Future<void> cancelAll();
   Stream<void> get onTap;
+  Future<bool> hasPermission();
+  Future<bool> requestPermission();
 }
 
 class NotificationService implements Notifier {
@@ -65,4 +67,35 @@ class NotificationService implements Notifier {
 
   @override
   Future<void> cancelAll() => _plugin.cancelAll();
+
+  @override
+  Future<bool> hasPermission() async {
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      final granted = await ios.checkPermissions();
+      return granted?.isEnabled ?? false;
+    }
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? false;
+    }
+    return true;
+  }
+
+  @override
+  Future<bool> requestPermission() async {
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      return await ios.requestPermissions(alert: true, sound: true) ?? false;
+    }
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.requestNotificationsPermission() ?? true;
+    }
+    return true;
+  }
 }

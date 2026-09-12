@@ -14,12 +14,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Timer? _ticker;
+  bool _permissionOk = true;
 
   @override
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final svc = context.read<SessionService>();
+      final ok = await svc.checkNotificationPermission();
+      if (!ok) {
+        final granted = await svc.requestNotificationPermission();
+        if (mounted) setState(() => _permissionOk = granted);
+      }
     });
   }
 
@@ -58,6 +67,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (!_permissionOk)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 24),
+                color: Colors.orange.shade100,
+                child: const Text(
+                  'Notifications are disabled. Enable them in Settings for reminders to work.',
+                ),
+              ),
             CircularButton(
               label: svc.isActive ? 'Stop' : 'Start',
               color: svc.isActive ? Colors.redAccent : Colors.teal,

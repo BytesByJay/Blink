@@ -17,6 +17,10 @@ class _FakeNotifier implements Notifier {
   Future<void> cancelAll() async {}
   @override
   Stream<void> get onTap => const Stream.empty();
+  @override
+  Future<bool> hasPermission() async => true;
+  @override
+  Future<bool> requestPermission() async => true;
 }
 
 Widget _wrap(SessionService svc) => ChangeNotifierProvider.value(

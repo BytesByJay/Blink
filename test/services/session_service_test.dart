@@ -24,6 +24,10 @@ class FakeNotifier implements Notifier {
   }
   @override
   Stream<void> get onTap => _tap.stream;
+  @override
+  Future<bool> hasPermission() async => true;
+  @override
+  Future<bool> requestPermission() async => true;
 }
 
 void main() {

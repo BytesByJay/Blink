@@ -59,6 +59,9 @@ class SessionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> checkNotificationPermission() => _notifier.hasPermission();
+  Future<bool> requestNotificationPermission() => _notifier.requestPermission();
+
   Future<void> _scheduleNext() async {
     final when = _clock().add(Duration(minutes: _settings.intervalMinutes));
     _nextReminderAt = when;
