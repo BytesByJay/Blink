@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../services/session_service.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -15,47 +17,66 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        children: [
-          ListTile(
-            title: const Text('Interval'),
-            subtitle: const Text('Minutes between reminders'),
-            trailing: DropdownButton<int>(
-              value: s.intervalMinutes,
-              items: _intervals
-                  .map((v) => DropdownMenuItem(value: v, child: Text('$v min')))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) svc.applySettings(s.copyWith(intervalMinutes: v));
-              },
-            ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: ListView(
+            children: [
+              ListTile(
+                title: const Text('Interval'),
+                subtitle: const Text('Minutes between reminders'),
+                trailing: DropdownButton<int>(
+                  value: s.intervalMinutes,
+                  items: _intervals
+                      .map(
+                        (v) =>
+                            DropdownMenuItem(value: v, child: Text('$v min')),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      svc.applySettings(s.copyWith(intervalMinutes: v));
+                    }
+                  },
+                ),
+              ),
+              ListTile(
+                title: const Text('Look-away duration'),
+                subtitle: const Text('Seconds to rest your eyes'),
+                trailing: DropdownButton<int>(
+                  value: s.lookAwaySeconds,
+                  items: _lookAways
+                      .map(
+                        (v) =>
+                            DropdownMenuItem(value: v, child: Text('$v sec')),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      svc.applySettings(s.copyWith(lookAwaySeconds: v));
+                    }
+                  },
+                ),
+              ),
+              SwitchListTile(
+                key: const ValueKey('sound_switch'),
+                title: const Text('Sound'),
+                value: s.soundEnabled,
+                onChanged: (v) =>
+                    svc.applySettings(s.copyWith(soundEnabled: v)),
+              ),
+              // Desktops can't vibrate; the saved value is kept for mobile.
+              if (!kIsWeb)
+                SwitchListTile(
+                  key: const ValueKey('vibration_switch'),
+                  title: const Text('Vibration'),
+                  value: s.vibrationEnabled,
+                  onChanged: (v) =>
+                      svc.applySettings(s.copyWith(vibrationEnabled: v)),
+                ),
+            ],
           ),
-          ListTile(
-            title: const Text('Look-away duration'),
-            subtitle: const Text('Seconds to rest your eyes'),
-            trailing: DropdownButton<int>(
-              value: s.lookAwaySeconds,
-              items: _lookAways
-                  .map((v) => DropdownMenuItem(value: v, child: Text('$v sec')))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) svc.applySettings(s.copyWith(lookAwaySeconds: v));
-              },
-            ),
-          ),
-          SwitchListTile(
-            key: const ValueKey('sound_switch'),
-            title: const Text('Sound'),
-            value: s.soundEnabled,
-            onChanged: (v) => svc.applySettings(s.copyWith(soundEnabled: v)),
-          ),
-          SwitchListTile(
-            key: const ValueKey('vibration_switch'),
-            title: const Text('Vibration'),
-            value: s.vibrationEnabled,
-            onChanged: (v) => svc.applySettings(s.copyWith(vibrationEnabled: v)),
-          ),
-        ],
+        ),
       ),
     );
   }

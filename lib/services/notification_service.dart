@@ -1,17 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
-abstract class Notifier {
-  Future<void> init();
-  Future<void> scheduleAt(DateTime when,
-      {required bool sound, required bool vibration});
-  Future<void> cancelAll();
-  Stream<void> get onTap;
-  Future<bool> hasPermission();
-  Future<bool> requestPermission();
-}
+import 'notifier.dart';
+
+export 'notifier.dart';
 
 class NotificationService implements Notifier {
   final _plugin = FlutterLocalNotificationsPlugin();
@@ -22,6 +17,11 @@ class NotificationService implements Notifier {
 
   @override
   Stream<void> get onTap => _tapController.stream;
+
+  // The OS delivers scheduled notifications while the app may not be running,
+  // so there is no reliable in-app fire event on mobile.
+  @override
+  Stream<void> get onFired => const Stream.empty();
 
   @override
   Future<void> init() async {
@@ -39,8 +39,11 @@ class NotificationService implements Notifier {
   }
 
   @override
-  Future<void> scheduleAt(DateTime when,
-      {required bool sound, required bool vibration}) async {
+  Future<void> scheduleAt(
+    DateTime when, {
+    required bool sound,
+    required bool vibration,
+  }) async {
     final tzWhen = tz.TZDateTime.from(when, tz.local);
     final android = AndroidNotificationDetails(
       _channelId,
@@ -50,9 +53,7 @@ class NotificationService implements Notifier {
       playSound: sound,
       enableVibration: vibration,
     );
-    final ios = DarwinNotificationDetails(
-      presentSound: sound,
-    );
+    final ios = DarwinNotificationDetails(presentSound: sound);
     await _plugin.zonedSchedule(
       _id,
       'Time to rest your eyes',
@@ -70,14 +71,18 @@ class NotificationService implements Notifier {
 
   @override
   Future<bool> hasPermission() async {
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     if (ios != null) {
       final granted = await ios.checkPermissions();
       return granted?.isEnabled ?? false;
     }
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (android != null) {
       return await android.areNotificationsEnabled() ?? false;
     }
@@ -86,13 +91,17 @@ class NotificationService implements Notifier {
 
   @override
   Future<bool> requestPermission() async {
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     if (ios != null) {
       return await ios.requestPermissions(alert: true, sound: true) ?? false;
     }
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (android != null) {
       return await android.requestNotificationsPermission() ?? true;
     }

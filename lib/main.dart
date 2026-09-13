@@ -1,9 +1,10 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'screens/home_screen.dart';
 import 'screens/look_away_screen.dart';
-import 'services/notification_service.dart';
+import 'services/notifier_factory.dart';
 import 'services/session_service.dart';
 import 'services/settings_service.dart';
 
@@ -12,7 +13,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final notifier = NotificationService();
+  final notifier = createNotifier();
   await notifier.init();
 
   final settingsService = SettingsService();
@@ -22,21 +23,20 @@ Future<void> main() async {
   );
   await session.loadSettings();
 
+  // Both streams can report the same reminder; SessionService dedupes.
+  notifier.onFired.listen((_) => session.onReminderFired());
   notifier.onTap.listen((_) async {
     await session.onReminderFired();
-    navigatorKey.currentState?.push(MaterialPageRoute(
-      builder: (_) => LookAwayScreen(
-        onChime: () => AudioPlayer().play(AssetSource('sounds/chime.mp3')),
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => LookAwayScreen(
+          onChime: () => AudioPlayer().play(AssetSource('sounds/chime.mp3')),
+        ),
       ),
-    ));
+    );
   });
 
-  runApp(
-    ChangeNotifierProvider.value(
-      value: session,
-      child: const BlinkApp(),
-    ),
-  );
+  runApp(ChangeNotifierProvider.value(value: session, child: const BlinkApp()));
 }
 
 class BlinkApp extends StatelessWidget {

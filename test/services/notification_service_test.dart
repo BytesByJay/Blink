@@ -12,12 +12,17 @@ class _NoopNotifier implements Notifier {
   @override
   Future<void> init() async {}
   @override
-  Future<void> scheduleAt(DateTime when,
-      {required bool sound, required bool vibration}) async {}
+  Future<void> scheduleAt(
+    DateTime when, {
+    required bool sound,
+    required bool vibration,
+  }) async {}
   @override
   Future<void> cancelAll() async {}
   @override
   Stream<void> get onTap => const Stream.empty();
+  @override
+  Stream<void> get onFired => const Stream.empty();
   @override
   Future<bool> hasPermission() async => true;
   @override

@@ -1,9 +1,15 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/settings.dart';
-import 'notification_service.dart';
+import 'notifier.dart';
 import 'settings_service.dart';
 
 class SessionService extends ChangeNotifier {
+  /// A reminder trigger arriving while the next reminder is still further
+  /// away than this was already handled (e.g. timer fire, then notification
+  /// click). It also tolerates a timer firing slightly early.
+  static const _alreadyHandledMargin = Duration(seconds: 5);
+
   final Notifier _notifier;
   final SettingsService _settingsService;
   final DateTime Function() _clock;
@@ -16,9 +22,9 @@ class SessionService extends ChangeNotifier {
     required Notifier notifier,
     required SettingsService settingsService,
     DateTime Function() clock = DateTime.now,
-  })  : _notifier = notifier,
-        _settingsService = settingsService,
-        _clock = clock;
+  }) : _notifier = notifier,
+       _settingsService = settingsService,
+       _clock = clock;
 
   bool get isActive => _isActive;
   DateTime? get nextReminderAt => _nextReminderAt;
@@ -45,6 +51,11 @@ class SessionService extends ChangeNotifier {
 
   Future<void> onReminderFired() async {
     if (!_isActive) return;
+    final next = _nextReminderAt;
+    if (next != null &&
+        _clock().isBefore(next.subtract(_alreadyHandledMargin))) {
+      return;
+    }
     await _scheduleNext();
     notifyListeners();
   }
