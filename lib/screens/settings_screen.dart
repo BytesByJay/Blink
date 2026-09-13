@@ -7,7 +7,7 @@ import '../services/session_service.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const _intervals = [5, 10, 15, 20, 30, 45, 60];
+  static const _intervals = [1, 5, 10, 15, 20, 30, 45, 60];
   static const _lookAways = [10, 20, 30, 45, 60];
 
   @override

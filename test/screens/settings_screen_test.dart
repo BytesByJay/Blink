@@ -74,4 +74,26 @@ void main() {
 
     expect(svc.settings.soundEnabled, false);
   });
+
+  testWidgets('choosing a 1 min interval persists value', (t) async {
+    final svc = SessionService(
+      notifier: _FakeNotifier(),
+      settingsService: SettingsService(),
+    );
+    await svc.loadSettings();
+
+    await t.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: svc,
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+
+    await t.tap(find.byType(DropdownButton<int>).first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('1 min').last);
+    await t.pumpAndSettle();
+
+    expect(svc.settings.intervalMinutes, 1);
+  });
 }

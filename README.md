@@ -8,7 +8,7 @@ Runs on **iOS**, **Android**, and **desktop browsers** as an installable PWA: **
 
 - **Alarm-style reminders**: sound + vibration + notification, fires even when the phone is locked or the app is backgrounded (via local notifications, no server needed).
 - **Full-screen look-away timer**: tap the notification to open a countdown that removes the temptation to keep staring at the screen; a gentle chime plays when the rest is done.
-- **Configurable**: interval (5 / 10 / 15 / 20 / 30 / 45 / 60 min), look-away duration (10 / 20 / 30 / 45 / 60 s), sound on/off, vibration on/off.
+- **Configurable**: interval (1 / 5 / 10 / 15 / 20 / 30 / 45 / 60 min), look-away duration (10 / 20 / 30 / 45 / 60 s), sound on/off, vibration on/off.
 - **Simple Start / Stop model**: you decide when a work session begins and ends. No always-on background chatter.
 - **Web version (PWA)**: same app in Chrome, Edge, Firefox, or Safari on your computer. Install it as its own window; reminders fire while it is open, even in the background.
 
@@ -97,7 +97,7 @@ flutter test
 
 ## Testing
 
-25 tests cover the model, services, and screen widgets:
+26 tests cover the model, services, and screen widgets:
 
 - `test/models/`: Settings defaults, `copyWith`, and JSON round-trip
 - `test/services/`: persistence, notification scheduling, session Start/Stop, reschedule on setting changes, duplicate-trigger guard, web reminder timer (including wake-from-sleep)
