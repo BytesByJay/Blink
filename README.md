@@ -4,25 +4,25 @@ A minimal cross-platform mobile app that reminds you to rest your eyes on a set 
 
 ## Features
 
-- **Alarm-style reminders** — sound + vibration + notification, fires even when the phone is locked or the app is backgrounded (via local notifications, no server needed).
-- **Full-screen look-away timer** — tap the notification to open a countdown that removes the temptation to keep staring at the screen; a gentle chime plays when the rest is done.
-- **Configurable** — interval (5 / 10 / 15 / 20 / 30 / 45 / 60 min), look-away duration (10 / 20 / 30 / 45 / 60 s), sound on/off, vibration on/off.
-- **Simple Start / Stop model** — you decide when a work session begins and ends. No always-on background chatter.
+- **Alarm-style reminders**: sound + vibration + notification, fires even when the phone is locked or the app is backgrounded (via local notifications, no server needed).
+- **Full-screen look-away timer**: tap the notification to open a countdown that removes the temptation to keep staring at the screen; a gentle chime plays when the rest is done.
+- **Configurable**: interval (5 / 10 / 15 / 20 / 30 / 45 / 60 min), look-away duration (10 / 20 / 30 / 45 / 60 s), sound on/off, vibration on/off.
+- **Simple Start / Stop model**: you decide when a work session begins and ends. No always-on background chatter.
 
 ## Screens
 
-- **Home** — large circular Start / Stop button and a live "next reminder in mm:ss" countdown.
-- **Settings** — dropdowns for interval and look-away duration; toggles for sound and vibration.
-- **Look-Away** — dark full-screen overlay with a countdown ring, "Look 20 feet away" prompt, chime on completion, and a Skip escape hatch.
+- **Home**: large circular Start / Stop button and a live "next reminder in mm:ss" countdown.
+- **Settings**: dropdowns for interval and look-away duration; toggles for sound and vibration.
+- **Look-Away**: dark full-screen overlay with a countdown ring, "Look 20 feet away" prompt, chime on completion, and a Skip escape hatch.
 
 ## Tech Stack
 
-- **Flutter** (Dart) — iOS + Android from one codebase
-- **provider** — state management
-- **shared_preferences** — persist settings
-- **flutter_local_notifications** — scheduled OS-level alarms
-- **audioplayers** — reminder sound and end-chime
-- **timezone** — exact scheduling across timezones
+- **Flutter** (Dart): iOS + Android from one codebase
+- **provider**: state management
+- **shared_preferences**: persist settings
+- **flutter_local_notifications**: scheduled OS-level alarms
+- **audioplayers**: reminder sound and end-chime
+- **timezone**: exact scheduling across timezones
 
 ## Project Structure
 
@@ -75,22 +75,22 @@ flutter test
 
 ## Sound Assets
 
-The repo ships with **empty placeholder files** at `assets/sounds/alarm.mp3` and `assets/sounds/chime.mp3`. Replace them with real audio before shipping — [pixabay.com/sound-effects](https://pixabay.com/sound-effects) has royalty-free options. Keep the filenames identical.
+The repo ships with **empty placeholder files** at `assets/sounds/alarm.mp3` and `assets/sounds/chime.mp3`. Replace them with real audio before shipping. [pixabay.com/sound-effects](https://pixabay.com/sound-effects) has royalty-free options. Keep the filenames identical.
 
 ## Testing
 
 17 tests cover the model, services, and screen widgets:
 
-- `test/models/` — Settings defaults, `copyWith`, and JSON round-trip
-- `test/services/` — persistence, notification scheduling, session Start/Stop, reschedule on setting changes
-- `test/screens/` — Home Start/Stop toggle, Settings controls, Look-Away countdown and Skip
+- `test/models/`: Settings defaults, `copyWith`, and JSON round-trip
+- `test/services/`: persistence, notification scheduling, session Start/Stop, reschedule on setting changes
+- `test/screens/`: Home Start/Stop toggle, Settings controls, Look-Away countdown and Skip
 
 All run in pure Dart with `flutter_local_notifications` and `shared_preferences` mocked, so no device is required.
 
 ## Design Documents
 
-- [Design spec](docs/superpowers/specs/2026-09-12-blink-reminder-app-design.md) — goals, non-goals, screens, data model, behavior
-- [Implementation plan](docs/superpowers/plans/2026-09-12-blink-reminder-app.md) — 10 tasks, TDD steps, and code
+- [Design spec](docs/superpowers/specs/2026-09-12-blink-reminder-app-design.md): goals, non-goals, screens, data model, behavior
+- [Implementation plan](docs/superpowers/plans/2026-09-12-blink-reminder-app.md): 10 tasks, TDD steps, and code
 
 ## Roadmap (out of scope for v1)
 
@@ -109,4 +109,4 @@ All run in pure Dart with `flutter_local_notifications` and `shared_preferences`
 
 ## License
 
-Personal project — no license selected yet.
+Personal project. No license selected yet.
