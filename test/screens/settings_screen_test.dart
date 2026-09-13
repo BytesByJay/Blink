@@ -3,37 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blink/screens/settings_screen.dart';
-import 'package:blink/services/notification_service.dart';
 import 'package:blink/services/session_service.dart';
 import 'package:blink/services/settings_service.dart';
 
-class _FakeNotifier implements Notifier {
-  @override
-  Future<void> init() async {}
-  @override
-  Future<void> scheduleAt(
-    DateTime when, {
-    required bool sound,
-    required bool vibration,
-  }) async {}
-  @override
-  Future<void> cancelAll() async {}
-  @override
-  Stream<void> get onTap => const Stream.empty();
-  @override
-  Stream<void> get onFired => const Stream.empty();
-  @override
-  Future<bool> hasPermission() async => true;
-  @override
-  Future<bool> requestPermission() async => true;
-}
+import '../support/fake_notifier.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('renders Interval and Sound controls', (t) async {
     final svc = SessionService(
-      notifier: _FakeNotifier(),
+      notifier: FakeNotifier(),
       settingsService: SettingsService(),
     );
     await svc.loadSettings();
@@ -53,7 +33,7 @@ void main() {
 
   testWidgets('toggling Sound switch persists value', (t) async {
     final svc = SessionService(
-      notifier: _FakeNotifier(),
+      notifier: FakeNotifier(),
       settingsService: SettingsService(),
     );
     await svc.loadSettings();
@@ -77,7 +57,7 @@ void main() {
 
   testWidgets('choosing a 1 min interval persists value', (t) async {
     final svc = SessionService(
-      notifier: _FakeNotifier(),
+      notifier: FakeNotifier(),
       settingsService: SettingsService(),
     );
     await svc.loadSettings();

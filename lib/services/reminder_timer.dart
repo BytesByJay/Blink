@@ -1,10 +1,24 @@
 import 'dart:async';
 
-/// Holds a single pending reminder and fires [onFired] when it is due.
+/// The first reminder due strictly after [after], for a schedule that repeats
+/// every [interval] from [startedAt].
+DateTime nextReminderAfter(
+  DateTime startedAt,
+  Duration interval,
+  DateTime after,
+) {
+  final elapsed = after.difference(startedAt);
+  if (elapsed.isNegative) return startedAt.add(interval);
+  final done = elapsed.inMicroseconds ~/ interval.inMicroseconds;
+  return startedAt.add(interval * (done + 1));
+}
+
+/// Fires [onFired] every interval after a start time until cancelled.
 ///
 /// Browsers pause timers while the computer sleeps, so a periodic wall-clock
 /// check fires an overdue reminder shortly after waking instead of waiting
-/// out the rest of the original delay.
+/// out the rest of the original delay. Reminders missed while asleep collapse
+/// into that one catch-up.
 class ReminderTimer {
   static const _wakeCheckInterval = Duration(seconds: 15);
 
@@ -17,13 +31,8 @@ class ReminderTimer {
 
   Stream<void> get onFired => _firedController.stream;
 
-  void scheduleAt(DateTime when) {
-    cancel();
-    final delay = when.difference(_clock());
-    _exact = Timer(delay.isNegative ? Duration.zero : delay, _fire);
-    _wakeCheck = Timer.periodic(_wakeCheckInterval, (_) {
-      if (!_clock().isBefore(when)) _fire();
-    });
+  void start(DateTime startedAt, Duration interval) {
+    _armAfter(startedAt, interval, _clock());
   }
 
   void cancel() {
@@ -33,8 +42,20 @@ class ReminderTimer {
     _wakeCheck = null;
   }
 
-  void _fire() {
+  void _armAfter(DateTime startedAt, Duration interval, DateTime after) {
     cancel();
-    _firedController.add(null);
+    final due = nextReminderAfter(startedAt, interval, after);
+
+    void fire() {
+      final now = _clock();
+      _armAfter(startedAt, interval, now.isAfter(due) ? now : due);
+      _firedController.add(null);
+    }
+
+    final delay = due.difference(_clock());
+    _exact = Timer(delay.isNegative ? Duration.zero : delay, fire);
+    _wakeCheck = Timer.periodic(_wakeCheckInterval, (_) {
+      if (!_clock().isBefore(due)) fire();
+    });
   }
 }

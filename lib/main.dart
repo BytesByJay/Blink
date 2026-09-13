@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/home_screen.dart';
-import 'screens/look_away_screen.dart';
+import 'screens/look_away_launcher.dart';
 import 'services/notifier_factory.dart';
 import 'services/session_service.dart';
 import 'services/settings_service.dart';
@@ -21,22 +21,22 @@ Future<void> main() async {
     notifier: notifier,
     settingsService: settingsService,
   );
+  // Also resumes a session that was running when the app was last closed.
   await session.loadSettings();
 
-  // Both streams can report the same reminder; SessionService dedupes.
-  notifier.onFired.listen((_) => session.onReminderFired());
-  notifier.onTap.listen((_) async {
-    await session.onReminderFired();
-    navigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (_) => LookAwayScreen(
-          onChime: () => AudioPlayer().play(AssetSource('sounds/chime.mp3')),
-        ),
-      ),
-    );
-  });
+  final lookAway = LookAwayLauncher(
+    navigatorKey,
+    onChime: () => AudioPlayer().play(AssetSource('sounds/chime.mp3')),
+  );
+  notifier.onTap.listen((_) => lookAway.show());
+  final launchedFromReminder = await notifier.launchedFromReminder();
 
   runApp(ChangeNotifierProvider.value(value: session, child: const BlinkApp()));
+
+  // A tap that launched the app is reported here rather than on onTap.
+  if (launchedFromReminder) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => lookAway.show());
+  }
 }
 
 class BlinkApp extends StatelessWidget {

@@ -1,31 +1,34 @@
 import 'dart:async';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tzdata;
-import 'package:timezone/timezone.dart' as tz;
 
 import 'notifier.dart';
 
 export 'notifier.dart';
 
 class NotificationService implements Notifier {
-  final _plugin = FlutterLocalNotificationsPlugin();
+  NotificationService({FlutterLocalNotificationsPlugin? plugin})
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+
+  final FlutterLocalNotificationsPlugin _plugin;
   final _tapController = StreamController<void>.broadcast();
   static const _id = 1001;
-  static const _channelId = 'blink_reminders';
-  static const _channelName = 'Blink Reminders';
+  static const _title = 'Time to rest your eyes';
+  static const _body = 'Look 20 feet away for a moment';
+
+  /// Bundled as ios/Runner/blink_alarm.wav and
+  /// android/app/src/main/res/raw/blink_alarm.wav.
+  static const _alarmSound = 'blink_alarm';
+
+  /// Channel from before reminders had their own sound. Android fixes a
+  /// channel's sound when it is created, so it is replaced, not updated.
+  static const _legacyChannelId = 'blink_reminders';
 
   @override
   Stream<void> get onTap => _tapController.stream;
 
-  // The OS delivers scheduled notifications while the app may not be running,
-  // so there is no reliable in-app fire event on mobile.
-  @override
-  Stream<void> get onFired => const Stream.empty();
-
   @override
   Future<void> init() async {
-    tzdata.initializeTimeZones();
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -36,38 +39,83 @@ class NotificationService implements Notifier {
       const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: (_) => _tapController.add(null),
     );
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.deleteNotificationChannel(_legacyChannelId);
   }
 
+  /// The OS owns the repeating schedule, so reminders keep coming while the
+  /// app is suspended or closed, whether or not earlier ones were opened.
   @override
-  Future<void> scheduleAt(
-    DateTime when, {
+  Future<void> startRepeating(
+    Duration interval, {
     required bool sound,
     required bool vibration,
   }) async {
-    final tzWhen = tz.TZDateTime.from(when, tz.local);
-    final android = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      importance: Importance.high,
-      priority: Priority.high,
-      playSound: sound,
-      enableVibration: vibration,
-    );
-    final ios = DarwinNotificationDetails(presentSound: sound);
-    await _plugin.zonedSchedule(
+    await _plugin.cancelAll();
+    await _plugin.periodicallyShowWithDuration(
       _id,
-      'Time to rest your eyes',
-      'Look 20 feet away for a moment',
-      tzWhen,
-      NotificationDetails(android: android, iOS: ios),
+      _title,
+      _body,
+      interval,
+      _details(sound: sound, vibration: vibration),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  @override
+  Future<bool> resumeRepeating(
+    DateTime startedAt,
+    Duration interval, {
+    required bool sound,
+    required bool vibration,
+  }) async {
+    final pending = await _plugin.pendingNotificationRequests();
+    if (pending.any((r) => r.id == _id)) return true;
+    await startRepeating(interval, sound: sound, vibration: vibration);
+    return false;
   }
 
   @override
   Future<void> cancelAll() => _plugin.cancelAll();
+
+  @override
+  Future<bool> launchedFromReminder() async {
+    final details = await _plugin.getNotificationAppLaunchDetails();
+    return details?.didNotificationLaunchApp ?? false;
+  }
+
+  NotificationDetails _details({required bool sound, required bool vibration}) {
+    // Android fixes a channel's sound and vibration when the channel is
+    // created, so each combination gets its own channel.
+    final channelId =
+        'blink_${sound ? 'alarm' : 'silent'}_${vibration ? 'vibrate' : 'still'}';
+    final channelName =
+        '${sound ? 'Reminders' : 'Silent reminders'}'
+        '${vibration ? '' : ' (no vibration)'}';
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        channelId,
+        channelName,
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: sound,
+        sound: sound
+            ? const RawResourceAndroidNotificationSound(_alarmSound)
+            : null,
+        enableVibration: vibration,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentSound: sound,
+        sound: sound ? '$_alarmSound.wav' : null,
+        // Shows during Focus and Do Not Disturb; needs the time-sensitive
+        // entitlement in ios/Runner/Runner.entitlements.
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      ),
+    );
+  }
 
   @override
   Future<bool> hasPermission() async {

@@ -25,21 +25,32 @@ class WebNotifier implements Notifier {
   Stream<void> get onTap => _tapController.stream;
 
   @override
-  Stream<void> get onFired => _timer.onFired;
-
-  @override
   Future<void> init() async {
     _timer.onFired.listen((_) => _deliver());
   }
 
   @override
-  Future<void> scheduleAt(
-    DateTime when, {
+  Future<void> startRepeating(
+    Duration interval, {
     required bool sound,
     required bool vibration,
   }) async {
     _sound = sound;
-    _timer.scheduleAt(when);
+    _timer.start(DateTime.now(), interval);
+  }
+
+  /// The page's timers died with the previous page, so the schedule is always
+  /// re-created on its original times.
+  @override
+  Future<bool> resumeRepeating(
+    DateTime startedAt,
+    Duration interval, {
+    required bool sound,
+    required bool vibration,
+  }) async {
+    _sound = sound;
+    _timer.start(startedAt, interval);
+    return true;
   }
 
   @override
@@ -48,6 +59,9 @@ class WebNotifier implements Notifier {
     _shown?.close();
     _shown = null;
   }
+
+  @override
+  Future<bool> launchedFromReminder() async => false;
 
   @override
   Future<bool> hasPermission() async =>

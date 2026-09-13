@@ -3,38 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blink/screens/look_away_screen.dart';
-import 'package:blink/services/notification_service.dart';
 import 'package:blink/services/session_service.dart';
 import 'package:blink/services/settings_service.dart';
 import 'package:blink/widgets/countdown_ring.dart';
 
-class _FakeNotifier implements Notifier {
-  @override
-  Future<void> init() async {}
-  @override
-  Future<void> scheduleAt(
-    DateTime when, {
-    required bool sound,
-    required bool vibration,
-  }) async {}
-  @override
-  Future<void> cancelAll() async {}
-  @override
-  Stream<void> get onTap => const Stream.empty();
-  @override
-  Stream<void> get onFired => const Stream.empty();
-  @override
-  Future<bool> hasPermission() async => true;
-  @override
-  Future<bool> requestPermission() async => true;
-}
+import '../support/fake_notifier.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({'lookAwaySeconds': 2}));
 
   testWidgets('countdown decrements and fires chime at zero', (t) async {
     final svc = SessionService(
-      notifier: _FakeNotifier(),
+      notifier: FakeNotifier(),
       settingsService: SettingsService(),
     );
     await svc.loadSettings();
@@ -60,7 +40,7 @@ void main() {
     await t.binding.setSurfaceSize(const Size(1280, 800));
     addTearDown(() => t.binding.setSurfaceSize(null));
     final svc = SessionService(
-      notifier: _FakeNotifier(),
+      notifier: FakeNotifier(),
       settingsService: SettingsService(),
     );
     await svc.loadSettings();
@@ -80,7 +60,7 @@ void main() {
 
   testWidgets('Skip button dismisses the screen', (t) async {
     final svc = SessionService(
-      notifier: _FakeNotifier(),
+      notifier: FakeNotifier(),
       settingsService: SettingsService(),
     );
     await svc.loadSettings();

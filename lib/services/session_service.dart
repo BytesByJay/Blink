@@ -2,20 +2,16 @@ import 'package:flutter/foundation.dart';
 
 import '../models/settings.dart';
 import 'notifier.dart';
+import 'reminder_timer.dart';
 import 'settings_service.dart';
 
 class SessionService extends ChangeNotifier {
-  /// A reminder trigger arriving while the next reminder is still further
-  /// away than this was already handled (e.g. timer fire, then notification
-  /// click). It also tolerates a timer firing slightly early.
-  static const _alreadyHandledMargin = Duration(seconds: 5);
-
   final Notifier _notifier;
   final SettingsService _settingsService;
   final DateTime Function() _clock;
 
-  bool _isActive = false;
-  DateTime? _nextReminderAt;
+  /// When the running session's reminder schedule started; null when stopped.
+  DateTime? _startedAt;
   Settings _settings = const Settings.defaults();
 
   SessionService({
@@ -26,60 +22,65 @@ class SessionService extends ChangeNotifier {
        _settingsService = settingsService,
        _clock = clock;
 
-  bool get isActive => _isActive;
-  DateTime? get nextReminderAt => _nextReminderAt;
+  bool get isActive => _startedAt != null;
   Settings get settings => _settings;
 
+  DateTime? get nextReminderAt {
+    final startedAt = _startedAt;
+    if (startedAt == null) return null;
+    return nextReminderAfter(startedAt, _interval, _clock());
+  }
+
+  Duration get _interval => Duration(minutes: _settings.intervalMinutes);
+
+  /// Loads settings and resumes the session that was running when the app
+  /// last closed, if any.
   Future<void> loadSettings() async {
     _settings = await _settingsService.load();
+    final savedStart = await _settingsService.loadSessionStart();
+    if (savedStart != null) {
+      final intact = await _notifier.resumeRepeating(
+        savedStart,
+        _interval,
+        sound: _settings.soundEnabled,
+        vibration: _settings.vibrationEnabled,
+      );
+      _startedAt = intact ? savedStart : _clock();
+      if (!intact) await _settingsService.saveSessionStart(_startedAt);
+    }
     notifyListeners();
   }
 
   Future<void> start() async {
     _settings = await _settingsService.load();
-    _isActive = true;
-    await _scheduleNext();
+    await _startSchedule();
     notifyListeners();
   }
 
   Future<void> stop() async {
-    _isActive = false;
-    _nextReminderAt = null;
+    _startedAt = null;
     await _notifier.cancelAll();
-    notifyListeners();
-  }
-
-  Future<void> onReminderFired() async {
-    if (!_isActive) return;
-    final next = _nextReminderAt;
-    if (next != null &&
-        _clock().isBefore(next.subtract(_alreadyHandledMargin))) {
-      return;
-    }
-    await _scheduleNext();
+    await _settingsService.saveSessionStart(null);
     notifyListeners();
   }
 
   Future<void> applySettings(Settings s) async {
     _settings = s;
     await _settingsService.save(s);
-    if (_isActive) {
-      await _notifier.cancelAll();
-      await _scheduleNext();
-    }
+    if (isActive) await _startSchedule();
     notifyListeners();
   }
 
   Future<bool> checkNotificationPermission() => _notifier.hasPermission();
   Future<bool> requestNotificationPermission() => _notifier.requestPermission();
 
-  Future<void> _scheduleNext() async {
-    final when = _clock().add(Duration(minutes: _settings.intervalMinutes));
-    _nextReminderAt = when;
-    await _notifier.scheduleAt(
-      when,
+  Future<void> _startSchedule() async {
+    _startedAt = _clock();
+    await _notifier.startRepeating(
+      _interval,
       sound: _settings.soundEnabled,
       vibration: _settings.vibrationEnabled,
     );
+    await _settingsService.saveSessionStart(_startedAt);
   }
 }

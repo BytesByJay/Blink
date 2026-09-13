@@ -6,10 +6,11 @@ Runs on **iOS**, **Android**, and **desktop browsers** as an installable PWA: **
 
 ## Features
 
-- **Alarm-style reminders**: sound + vibration + notification, fires even when the phone is locked or the app is backgrounded (via local notifications, no server needed).
+- **Alarm-style reminders**: buzzer sound + vibration + notification. The phone's OS repeats them on its own, so they keep coming when you ignore one, lock the phone, or switch to another app (local notifications, no server needed).
+- **Shows through Focus on iPhone**: reminders are Time Sensitive, so Do Not Disturb and other Focus modes don't hide them.
 - **Full-screen look-away timer**: tap the notification to open a countdown that removes the temptation to keep staring at the screen; a gentle chime plays when the rest is done.
 - **Configurable**: interval (1 / 5 / 10 / 15 / 20 / 30 / 45 / 60 min), look-away duration (10 / 20 / 30 / 45 / 60 s), sound on/off, vibration on/off.
-- **Simple Start / Stop model**: you decide when a work session begins and ends. No always-on background chatter.
+- **Simple Start / Stop model**: you decide when a work session begins and ends. A running session survives the app being closed; reminders continue until you press Stop.
 - **Web version (PWA)**: same app in Chrome, Edge, Firefox, or Safari on your computer. Install it as its own window; reminders fire while it is open, even in the background.
 
 ## Screens
@@ -22,35 +23,37 @@ Runs on **iOS**, **Android**, and **desktop browsers** as an installable PWA: **
 
 - **Flutter** (Dart): iOS + Android + web from one codebase
 - **provider**: state management
-- **shared_preferences**: persist settings
-- **flutter_local_notifications**: scheduled OS-level alarms (mobile)
+- **shared_preferences**: persist settings and the running session
+- **flutter_local_notifications**: repeating OS-level reminders (mobile)
 - **web**: browser Notification API (web)
-- **audioplayers**: reminder sound and end-chime
-- **timezone**: exact scheduling across timezones
+- **audioplayers**: reminder sound (web) and end-chime
 - **GitHub Actions + GitHub Pages**: web build and hosting
 
 ## Project Structure
 
 ```
 lib/
-  main.dart                    App entry, Provider setup, reminder and notification-tap routing
+  main.dart                    App entry, Provider setup, notification-tap routing
   models/settings.dart         Settings data class (interval, look-away, sound, vibration)
   services/
-    settings_service.dart      Load/save settings via shared_preferences
+    settings_service.dart      Load/save settings and the running session via shared_preferences
     notifier.dart              Notifier interface shared by mobile and web
     notifier_factory.dart      Picks the mobile or web Notifier at compile time
-    notification_service.dart  Mobile Notifier: flutter_local_notifications wrapper
+    notification_service.dart  Mobile Notifier: repeating reminders via flutter_local_notifications
     web_notifier.dart          Web Notifier: in-page timer + browser notifications
-    reminder_timer.dart        One-shot reminder timer (sleep-aware), used by web
-    session_service.dart       Start/Stop, rescheduling on setting changes
+    reminder_timer.dart        Repeating reminder timer (sleep-aware), used by web
+    session_service.dart       Start/Stop, resume after restart, restart on setting changes
   screens/
     home_screen.dart           Start/Stop button + countdown
     settings_screen.dart       Interval, look-away, sound, vibration controls
     look_away_screen.dart      Full-screen countdown + chime
+    look_away_launcher.dart    Opens Look-Away for a reminder without stacking a second one
   widgets/
     circular_button.dart       Reusable large button
     countdown_ring.dart        Animated ring for look-away countdown
 assets/sounds/                 mixkit-warning-alarm-buzzer-991.wav (alarm), chime.mp3
+ios/Runner/                    blink_alarm.wav (notification sound), Runner.entitlements (Time Sensitive)
+android/app/src/main/res/raw/  blink_alarm.wav (notification sound), keep.xml
 web/                           PWA shell: index.html, manifest.json, icons
 .github/workflows/             deploy-web.yml: test, build, publish to GitHub Pages
 test/                          Unit tests for services and widget tests for screens
@@ -92,18 +95,18 @@ flutter test
 
 ## Sound Assets
 
-- **Alarm** (web): `assets/sounds/mixkit-warning-alarm-buzzer-991.wav`, "Warning alarm buzzer" from [Mixkit](https://mixkit.co/free-sound-effects/alarm/) (Mixkit Free License). On iOS and Android the reminder uses the system notification sound.
+- **Alarm**: "Warning alarm buzzer" from [Mixkit](https://mixkit.co/free-sound-effects/alarm/) (Mixkit Free License), 8 seconds. The web version plays `assets/sounds/mixkit-warning-alarm-buzzer-991.wav`; iOS and Android notifications use the copies at `ios/Runner/blink_alarm.wav` and `android/app/src/main/res/raw/blink_alarm.wav`. To change the alarm, replace all three. iOS notification sounds must be under 30 seconds.
 - **End chime**: `assets/sounds/chime.mp3` is still an **empty placeholder**. Replace it with real audio before shipping and keep the filename.
 
 ## Testing
 
-26 tests cover the model, services, and screen widgets:
+36 tests cover the model, services, and screen widgets:
 
 - `test/models/`: Settings defaults, `copyWith`, and JSON round-trip
-- `test/services/`: persistence, notification scheduling, session Start/Stop, reschedule on setting changes, duplicate-trigger guard, web reminder timer (including wake-from-sleep)
-- `test/screens/`: Home Start/Stop toggle, Settings controls, Look-Away countdown and Skip
+- `test/services/`: persistence; notification details (alarm sound, silent mode, Time Sensitive, Android channels); session Start/Stop, reminders continuing when ignored, resume after an app restart; web reminder timer (repeating, wake-from-sleep)
+- `test/screens/`: Home Start/Stop toggle, Settings controls (including the 1 min interval), Look-Away countdown, centring, Skip, and no stacked Look-Away screens
 
-All run in pure Dart with `flutter_local_notifications` and `shared_preferences` mocked, so no device is required.
+All run in pure Dart with `flutter_local_notifications` faked and `shared_preferences` mocked, so no device is required.
 
 ## Web Version (PWA)
 
@@ -114,11 +117,11 @@ All run in pure Dart with `flutter_local_notifications` and `shared_preferences`
 - If the Blink tab is visible when a reminder is due, the look-away screen opens directly. If it's in the background, you get a desktop notification; click it to open the look-away screen.
 
 **Limits (by browser design):**
-- Reminders only fire while Blink is open. Closing the tab or window stops them.
+- Reminders only fire while Blink is open. Closing the tab or window pauses them; reopening Blink picks the schedule back up. Until you click somewhere on the reopened page, the browser may block the alarm sound.
 - Background tabs may deliver a reminder up to about a minute late.
 - If the computer sleeps, the reminder fires within about 15 seconds of waking.
 - Windows Focus Assist and macOS Focus hide browser notifications.
-- Not meant for iPhone/iPad: iOS pauses web apps in the background, so reminders would not fire.
+- Not meant for iPhone/iPad: iOS pauses web apps in the background, so reminders would not fire. Use the iOS app instead.
 
 **Deployment:** every push to `main` runs `.github/workflows/deploy-web.yml`, which runs the tests, builds with `flutter build web --release --base-href /Blink/`, and publishes to GitHub Pages. One-time setup: in the repo, **Settings → Pages → Source: GitHub Actions**.
 
@@ -139,7 +142,8 @@ All run in pure Dart with `flutter_local_notifications` and `shared_preferences`
 
 ## Platform Notes
 
-- **iOS silent mode** silences the notification sound; vibration still works. Expected system behavior.
+- **iOS silent mode** silences the notification sound; vibration still works. Expected system behavior. Ringing through silent mode would need Apple's Critical Alerts entitlement.
+- **iOS Focus / Do Not Disturb**: reminders are Time Sensitive and show through Focus unless you turn off "Time Sensitive Notifications" for Blink in `Settings → Notifications → Blink`. Signing needs the Time Sensitive Notifications capability on your Apple developer team; if Xcode reports it isn't supported, remove `CODE_SIGN_ENTITLEMENTS` from the Runner target and reminders fall back to normal priority.
 - **iOS notification permission** is requested on first launch. If denied, the app shows a persistent banner. Re-enable in `Settings → Notifications → Blink`.
 - **Android 13+** requires the runtime `POST_NOTIFICATIONS` permission (also requested on first launch).
 - **Web** asks for notification permission when you click Start (browsers block prompts that aren't triggered by a click). If blocked, Blink shows a banner; re-enable in the browser's site settings. The Vibration setting is hidden on web.
