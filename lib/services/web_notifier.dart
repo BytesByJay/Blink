@@ -63,7 +63,9 @@ class WebNotifier implements Notifier {
   void _deliver() {
     if (_sound) {
       unawaited(
-        _alarm.play(AssetSource('sounds/alarm.mp3')).catchError((Object _) {}),
+        _alarm
+            .play(AssetSource('sounds/mixkit-warning-alarm-buzzer-991.wav'))
+            .catchError((Object _) {}),
       );
     }
 

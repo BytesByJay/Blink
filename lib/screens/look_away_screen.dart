@@ -49,26 +49,28 @@ class _LookAwayScreenState extends State<LookAwayScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(),
-            const Text(
-              'Look 20 feet away',
-              style: TextStyle(color: Colors.white, fontSize: 22),
-            ),
-            const SizedBox(height: 24),
-            CountdownRing(
-              progress: progress,
-              label: _done ? '✓' : '$_remaining',
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              child: const Text('Skip',
-                  style: TextStyle(color: Colors.white70)),
-            ),
-            const SizedBox(height: 24),
-          ],
+        child: Center(
+          child: Column(
+            children: [
+              const Spacer(),
+              const Text(
+                'Look 20 feet away',
+                style: TextStyle(color: Colors.white, fontSize: 22),
+              ),
+              const SizedBox(height: 24),
+              CountdownRing(
+                progress: progress,
+                label: _done ? '✓' : '$_remaining',
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                child: const Text('Skip',
+                    style: TextStyle(color: Colors.white70)),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

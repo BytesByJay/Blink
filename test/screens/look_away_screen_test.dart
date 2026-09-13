@@ -6,6 +6,7 @@ import 'package:blink/screens/look_away_screen.dart';
 import 'package:blink/services/notification_service.dart';
 import 'package:blink/services/session_service.dart';
 import 'package:blink/services/settings_service.dart';
+import 'package:blink/widgets/countdown_ring.dart';
 
 class _FakeNotifier implements Notifier {
   @override
@@ -53,6 +54,28 @@ void main() {
     expect(chimed, true);
     // Drain the delayed pop timer before the test ends to avoid pending timer errors.
     await t.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('content is horizontally centred on wide windows', (t) async {
+    await t.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => t.binding.setSurfaceSize(null));
+    final svc = SessionService(
+      notifier: _FakeNotifier(),
+      settingsService: SettingsService(),
+    );
+    await svc.loadSettings();
+
+    await t.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: svc,
+        child: const MaterialApp(home: LookAwayScreen()),
+      ),
+    );
+
+    expect(t.getCenter(find.byType(CountdownRing)).dx, 640);
+    expect(t.getCenter(find.text('Skip')).dx, 640);
+    // Drain the countdown and delayed pop timers.
+    await t.pump(const Duration(seconds: 4));
   });
 
   testWidgets('Skip button dismisses the screen', (t) async {

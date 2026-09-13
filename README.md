@@ -50,7 +50,7 @@ lib/
   widgets/
     circular_button.dart       Reusable large button
     countdown_ring.dart        Animated ring for look-away countdown
-assets/sounds/                 alarm.mp3, chime.mp3
+assets/sounds/                 mixkit-warning-alarm-buzzer-991.wav (alarm), chime.mp3
 web/                           PWA shell: index.html, manifest.json, icons
 .github/workflows/             deploy-web.yml: test, build, publish to GitHub Pages
 test/                          Unit tests for services and widget tests for screens
@@ -92,11 +92,12 @@ flutter test
 
 ## Sound Assets
 
-The repo ships with **empty placeholder files** at `assets/sounds/alarm.mp3` and `assets/sounds/chime.mp3`. Replace them with real audio before shipping. [pixabay.com/sound-effects](https://pixabay.com/sound-effects) has royalty-free options. Keep the filenames identical.
+- **Alarm** (web): `assets/sounds/mixkit-warning-alarm-buzzer-991.wav`, "Warning alarm buzzer" from [Mixkit](https://mixkit.co/free-sound-effects/alarm/) (Mixkit Free License). On iOS and Android the reminder uses the system notification sound.
+- **End chime**: `assets/sounds/chime.mp3` is still an **empty placeholder**. Replace it with real audio before shipping and keep the filename.
 
 ## Testing
 
-24 tests cover the model, services, and screen widgets:
+25 tests cover the model, services, and screen widgets:
 
 - `test/models/`: Settings defaults, `copyWith`, and JSON round-trip
 - `test/services/`: persistence, notification scheduling, session Start/Stop, reschedule on setting changes, duplicate-trigger guard, web reminder timer (including wake-from-sleep)
