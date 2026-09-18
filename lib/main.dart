@@ -10,6 +10,12 @@ import 'services/settings_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+/// iOS ends a break with AlarmKit's own alert, so an in-app chime would double
+/// up. Every other platform still chimes.
+VoidCallback? chimeCallback() => defaultTargetPlatform == TargetPlatform.iOS
+    ? null
+    : () => AudioPlayer().play(AssetSource('sounds/chime.mp3'));
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -24,10 +30,7 @@ Future<void> main() async {
   // Also resumes a session that was running when the app was last closed.
   await session.loadSettings();
 
-  final lookAway = LookAwayLauncher(
-    navigatorKey,
-    onChime: () => AudioPlayer().play(AssetSource('sounds/chime.mp3')),
-  );
+  final lookAway = LookAwayLauncher(navigatorKey, onChime: chimeCallback());
   notifier.onTap.listen((_) => lookAway.show());
   final launchedFromReminder = await notifier.launchedFromReminder();
 

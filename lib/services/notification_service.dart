@@ -3,14 +3,23 @@ import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'notifier.dart';
+import 'reminder_timer.dart';
 
 export 'notifier.dart';
 
 class NotificationService implements Notifier {
-  NotificationService({FlutterLocalNotificationsPlugin? plugin})
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  NotificationService({
+    FlutterLocalNotificationsPlugin? plugin,
+    ReminderTimer? timer,
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _timer = timer ?? ReminderTimer();
 
   final FlutterLocalNotificationsPlugin _plugin;
+
+  /// Mirrors the OS schedule in-process. The OS only hands a reminder back on
+  /// a tap, so without this nothing opens the Look-Away screen while Blink is
+  /// already on screen and the countdown just rolls into the next interval.
+  final ReminderTimer _timer;
   final _tapController = StreamController<void>.broadcast();
   static const _id = 1001;
   static const _title = 'Time to rest your eyes';
@@ -39,6 +48,7 @@ class NotificationService implements Notifier {
       const InitializationSettings(android: androidInit, iOS: iosInit),
       onDidReceiveNotificationResponse: (_) => _tapController.add(null),
     );
+    _timer.onFired.listen((_) => _tapController.add(null));
     await _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -51,6 +61,7 @@ class NotificationService implements Notifier {
   @override
   Future<void> startRepeating(
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   }) async {
@@ -63,23 +74,37 @@ class NotificationService implements Notifier {
       _details(sound: sound, vibration: vibration),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
+    _timer.startNow(interval);
   }
 
   @override
   Future<bool> resumeRepeating(
     DateTime startedAt,
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   }) async {
     final pending = await _plugin.pendingNotificationRequests();
-    if (pending.any((r) => r.id == _id)) return true;
-    await startRepeating(interval, sound: sound, vibration: vibration);
+    if (pending.any((r) => r.id == _id)) {
+      // The OS kept counting from the original start, so match its times.
+      _timer.start(startedAt, interval);
+      return true;
+    }
+    await startRepeating(
+      interval,
+      lookAwaySeconds: lookAwaySeconds,
+      sound: sound,
+      vibration: vibration,
+    );
     return false;
   }
 
   @override
-  Future<void> cancelAll() => _plugin.cancelAll();
+  Future<void> cancelAll() async {
+    _timer.cancel();
+    await _plugin.cancelAll();
+  }
 
   @override
   Future<bool> launchedFromReminder() async {

@@ -1,6 +1,8 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:blink/services/notification_service.dart';
+import 'package:blink/services/reminder_timer.dart';
 
 /// Records what [NotificationService] hands to the OS plugin.
 class _FakePlugin implements FlutterLocalNotificationsPlugin {
@@ -35,6 +37,19 @@ class _FakePlugin implements FlutterLocalNotificationsPlugin {
   }
 
   @override
+  Future<bool?> initialize(
+    InitializationSettings initializationSettings, {
+    DidReceiveNotificationResponseCallback? onDidReceiveNotificationResponse,
+    DidReceiveBackgroundNotificationResponseCallback?
+    onDidReceiveBackgroundNotificationResponse,
+  }) async => true;
+
+  @override
+  T? resolvePlatformSpecificImplementation<
+    T extends FlutterLocalNotificationsPlatform
+  >() => null;
+
+  @override
   Future<List<PendingNotificationRequest>> pendingNotificationRequests() async =>
       pending;
 
@@ -54,6 +69,7 @@ Future<NotificationDetails> _detailsFor({
   final plugin = _FakePlugin();
   await NotificationService(plugin: plugin).startRepeating(
     const Duration(minutes: 20),
+    lookAwaySeconds: 20,
     sound: sound,
     vibration: vibration,
   );
@@ -66,6 +82,7 @@ void main() {
 
     await NotificationService(plugin: plugin).startRepeating(
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
@@ -127,6 +144,7 @@ void main() {
     final svc = NotificationService(plugin: plugin);
     await svc.startRepeating(
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
@@ -134,6 +152,7 @@ void main() {
     final intact = await svc.resumeRepeating(
       DateTime(2026, 1, 1, 12),
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
@@ -148,11 +167,104 @@ void main() {
     final intact = await NotificationService(plugin: plugin).resumeRepeating(
       DateTime(2026, 1, 1, 12),
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
 
     expect(intact, false);
     expect(plugin.shown.single.interval, const Duration(minutes: 20));
+  });
+
+  test('a reminder coming due while the app is open opens the Look-Away screen',
+      () {
+    // The OS only reports a reminder back on a tap, so an in-app timer has to
+    // stand in while Blink is already on screen.
+    fakeAsync((async) {
+      final start = DateTime(2026, 1, 1, 12);
+      final plugin = _FakePlugin();
+      final svc = NotificationService(
+        plugin: plugin,
+        timer: ReminderTimer(clock: () => start.add(async.elapsed)),
+      );
+      var opened = 0;
+      svc.init();
+      async.flushMicrotasks();
+      svc.onTap.listen((_) => opened++);
+
+      svc.startRepeating(
+        const Duration(minutes: 20),
+        lookAwaySeconds: 20,
+        sound: true,
+        vibration: true,
+      );
+      async.flushMicrotasks();
+
+      async.elapse(const Duration(minutes: 19, seconds: 59));
+      expect(opened, 0);
+      async.elapse(const Duration(seconds: 1));
+      expect(opened, 1);
+      async.elapse(const Duration(minutes: 20));
+      expect(opened, 2);
+    });
+  });
+
+  test('stopping the session stops the in-app reminders too', () {
+    fakeAsync((async) {
+      final start = DateTime(2026, 1, 1, 12);
+      final plugin = _FakePlugin();
+      final svc = NotificationService(
+        plugin: plugin,
+        timer: ReminderTimer(clock: () => start.add(async.elapsed)),
+      );
+      var opened = 0;
+      svc.init();
+      async.flushMicrotasks();
+      svc.onTap.listen((_) => opened++);
+
+      svc.startRepeating(
+        const Duration(minutes: 20),
+        lookAwaySeconds: 20,
+        sound: true,
+        vibration: true,
+      );
+      async.flushMicrotasks();
+      svc.cancelAll();
+      async.flushMicrotasks();
+
+      async.elapse(const Duration(minutes: 40));
+      expect(opened, 0);
+    });
+  });
+
+  test('a resumed session keeps the original reminder times', () {
+    fakeAsync((async) {
+      final start = DateTime(2026, 1, 1, 12);
+      final plugin = _FakePlugin()
+        ..pending = [PendingNotificationRequest(1001, null, null, null)];
+      final svc = NotificationService(
+        plugin: plugin,
+        timer: ReminderTimer(clock: () => start.add(async.elapsed)),
+      );
+      var opened = 0;
+      svc.init();
+      async.flushMicrotasks();
+      svc.onTap.listen((_) => opened++);
+
+      // Reopened 15 minutes into a 20 minute interval.
+      svc.resumeRepeating(
+        start.subtract(const Duration(minutes: 15)),
+        const Duration(minutes: 20),
+        lookAwaySeconds: 20,
+        sound: true,
+        vibration: true,
+      );
+      async.flushMicrotasks();
+
+      async.elapse(const Duration(minutes: 4, seconds: 59));
+      expect(opened, 0);
+      async.elapse(const Duration(seconds: 1));
+      expect(opened, 1);
+    });
   });
 }

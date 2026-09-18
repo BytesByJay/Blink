@@ -42,6 +42,7 @@ class SessionService extends ChangeNotifier {
       final intact = await _notifier.resumeRepeating(
         savedStart,
         _interval,
+        lookAwaySeconds: _settings.lookAwaySeconds,
         sound: _settings.soundEnabled,
         vibration: _settings.vibrationEnabled,
       );
@@ -78,6 +79,7 @@ class SessionService extends ChangeNotifier {
     _startedAt = _clock();
     await _notifier.startRepeating(
       _interval,
+      lookAwaySeconds: _settings.lookAwaySeconds,
       sound: _settings.soundEnabled,
       vibration: _settings.vibrationEnabled,
     );

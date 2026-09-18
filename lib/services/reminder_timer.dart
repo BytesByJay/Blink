@@ -35,6 +35,9 @@ class ReminderTimer {
     _armAfter(startedAt, interval, _clock());
   }
 
+  /// Starts a schedule whose first reminder is [interval] from now.
+  void startNow(Duration interval) => start(_clock(), interval);
+
   void cancel() {
     _exact?.cancel();
     _wakeCheck?.cancel();

@@ -18,6 +18,7 @@ class FakeNotifier implements Notifier {
   @override
   Future<void> startRepeating(
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   }) async {
@@ -28,6 +29,7 @@ class FakeNotifier implements Notifier {
   Future<bool> resumeRepeating(
     DateTime startedAt,
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   }) async {
