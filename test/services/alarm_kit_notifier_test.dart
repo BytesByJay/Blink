@@ -152,14 +152,15 @@ void main() {
     final taps = <void>[];
     svc.onTap.listen(taps.add);
 
-    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(
-          kAlarmChannel.name,
-          kAlarmChannel.codec.encodeMethodCall(
-            const MethodCall('openedFromAlarm'),
-          ),
-          (_) {},
-        );
+    // channelBuffers.push is the non-deprecated way to simulate a call
+    // arriving from the platform side.
+    ServicesBinding.instance.channelBuffers.push(
+      kAlarmChannel.name,
+      kAlarmChannel.codec.encodeMethodCall(
+        const MethodCall('openedFromAlarm'),
+      ),
+      (_) {},
+    );
     await Future<void>.delayed(Duration.zero);
 
     expect(taps, hasLength(1));
