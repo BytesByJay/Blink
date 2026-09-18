@@ -21,7 +21,9 @@ abstract class Notifier {
 
   Future<void> cancelAll();
 
-  /// Emits when the user opens a reminder (e.g. taps its notification).
+  /// Emits when the Look-Away screen should open: the user opened a reminder
+  /// (e.g. tapped its notification), or one came due while the app was on
+  /// screen, where the OS reports nothing by itself.
   Stream<void> get onTap;
 
   /// Whether the app was launched by opening a reminder.
