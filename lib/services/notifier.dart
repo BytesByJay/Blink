@@ -5,6 +5,7 @@ abstract class Notifier {
   /// until [cancelAll]. Replaces any existing schedule.
   Future<void> startRepeating(
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   });
@@ -15,6 +16,7 @@ abstract class Notifier {
   Future<bool> resumeRepeating(
     DateTime startedAt,
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   });

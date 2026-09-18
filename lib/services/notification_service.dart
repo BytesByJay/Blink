@@ -61,6 +61,7 @@ class NotificationService implements Notifier {
   @override
   Future<void> startRepeating(
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   }) async {
@@ -80,6 +81,7 @@ class NotificationService implements Notifier {
   Future<bool> resumeRepeating(
     DateTime startedAt,
     Duration interval, {
+    required int lookAwaySeconds,
     required bool sound,
     required bool vibration,
   }) async {
@@ -89,7 +91,12 @@ class NotificationService implements Notifier {
       _timer.start(startedAt, interval);
       return true;
     }
-    await startRepeating(interval, sound: sound, vibration: vibration);
+    await startRepeating(
+      interval,
+      lookAwaySeconds: lookAwaySeconds,
+      sound: sound,
+      vibration: vibration,
+    );
     return false;
   }
 

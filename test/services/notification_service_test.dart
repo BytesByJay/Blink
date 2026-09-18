@@ -69,6 +69,7 @@ Future<NotificationDetails> _detailsFor({
   final plugin = _FakePlugin();
   await NotificationService(plugin: plugin).startRepeating(
     const Duration(minutes: 20),
+    lookAwaySeconds: 20,
     sound: sound,
     vibration: vibration,
   );
@@ -81,6 +82,7 @@ void main() {
 
     await NotificationService(plugin: plugin).startRepeating(
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
@@ -142,6 +144,7 @@ void main() {
     final svc = NotificationService(plugin: plugin);
     await svc.startRepeating(
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
@@ -149,6 +152,7 @@ void main() {
     final intact = await svc.resumeRepeating(
       DateTime(2026, 1, 1, 12),
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
@@ -163,6 +167,7 @@ void main() {
     final intact = await NotificationService(plugin: plugin).resumeRepeating(
       DateTime(2026, 1, 1, 12),
       const Duration(minutes: 20),
+      lookAwaySeconds: 20,
       sound: true,
       vibration: true,
     );
@@ -189,6 +194,7 @@ void main() {
 
       svc.startRepeating(
         const Duration(minutes: 20),
+        lookAwaySeconds: 20,
         sound: true,
         vibration: true,
       );
@@ -218,6 +224,7 @@ void main() {
 
       svc.startRepeating(
         const Duration(minutes: 20),
+        lookAwaySeconds: 20,
         sound: true,
         vibration: true,
       );
@@ -248,6 +255,7 @@ void main() {
       svc.resumeRepeating(
         start.subtract(const Duration(minutes: 15)),
         const Duration(minutes: 20),
+        lookAwaySeconds: 20,
         sound: true,
         vibration: true,
       );
