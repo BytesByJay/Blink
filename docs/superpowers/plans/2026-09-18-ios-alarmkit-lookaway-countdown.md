@@ -23,6 +23,31 @@
 - **AlarmKit is new and could not be compiled while writing this plan.** Every Swift signature below must be checked against Xcode autocomplete before assuming it is correct. Where a signature differs, keep the behaviour and adjust the call.
 - Commit after each task.
 
+## Execution Status (2026-09-18)
+
+Branch: `feat/ios-alarmkit-countdown`.
+
+| Task | State |
+|---|---|
+| 1–4 Dart: `AlarmKitNotifier`, batching, top-up, auth, factory | Code written, **tests never run** |
+| 5 Xcode target + app group | **NOT DONE — requires Xcode** |
+| 5 Info.plist, deployment target | Done (scripted) |
+| 6–8 Swift: metadata, plugin, widget | Files written, **never compiled**, **not added to any Xcode target** |
+| 9 iOS chime suppression | Code written, tests never run |
+| 10 Device QA | Not started |
+
+**Deviations from this plan, deliberate:**
+- The `UNUserNotificationCenter` delegate in `AppDelegate.swift` and the
+  time-sensitive entitlement were **kept**, not removed. AlarmKit is unverified;
+  backing it out must not leave the notification path broken.
+
+**Blocking next steps, all on a Mac:**
+1. `flutter test` — nothing here has been executed.
+2. Task 5 Step 2: create the `BlinkAlarmWidget` target in Xcode, then move
+   `ios/BlinkAlarmWidget/BlinkAlarmWidget.swift` into it.
+3. Task 6 Step 2: tick `BlinkAlarmMetadata.swift` into **both** targets.
+4. Verify every AlarmKit signature against Xcode autocomplete.
+
 ---
 
 ### Task 1: AlarmKitNotifier — scheduling a batch
