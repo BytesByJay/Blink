@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -34,7 +35,12 @@ Future<void> main() async {
   notifier.onTap.listen((_) => lookAway.show());
   final launchedFromReminder = await notifier.launchedFromReminder();
 
-  runApp(ChangeNotifierProvider.value(value: session, child: const BlinkApp()));
+  runApp(
+    ChangeNotifierProvider.value(
+      value: session,
+      child: BlinkApp(navigatorKey: navigatorKey, lookAway: lookAway),
+    ),
+  );
 
   // A tap that launched the app is reported here rather than on onTap.
   if (launchedFromReminder) {
@@ -42,12 +48,57 @@ Future<void> main() async {
   }
 }
 
-class BlinkApp extends StatelessWidget {
-  const BlinkApp({super.key});
+class BlinkApp extends StatefulWidget {
+  const BlinkApp({
+    super.key,
+    required this.navigatorKey,
+    required this.lookAway,
+  });
+
+  final GlobalKey<NavigatorState> navigatorKey;
+  final LookAwayLauncher lookAway;
+
+  @override
+  State<BlinkApp> createState() => _BlinkAppState();
+}
+
+class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Covers a cold launch that lands mid-break.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openBreakIfRunning());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _openBreakIfRunning();
+  }
+
+  /// iOS hands the break to AlarmKit, which alerts in system UI and reports
+  /// nothing back, so opening Blink from that alert has to be noticed here:
+  /// the Look-Away screen picks up what is left of the break instead of the
+  /// Home screen counting down to the next interval.
+  void _openBreakIfRunning() {
+    if (!mounted) return;
+    final left = context.read<SessionService>().breakRemaining;
+    if (left == null) return;
+    widget.lookAway.show(
+      remainingSeconds: (left.inMilliseconds / 1000).ceil(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: navigatorKey,
+      navigatorKey: widget.navigatorKey,
       title: 'Blink',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),

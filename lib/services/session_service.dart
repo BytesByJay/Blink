@@ -12,6 +12,10 @@ class SessionService extends ChangeNotifier {
 
   /// When the running session's reminder schedule started; null when stopped.
   DateTime? _startedAt;
+
+  /// The break the user has already seen out, so reopening Blink during it
+  /// does not put the Look-Away screen back up.
+  DateTime? _dismissedBreakAt;
   Settings _settings = const Settings.defaults();
 
   SessionService({
@@ -32,6 +36,30 @@ class SessionService extends ChangeNotifier {
   }
 
   Duration get _interval => Duration(minutes: _settings.intervalMinutes);
+
+  /// How much of the break that is running right now is left, or null when no
+  /// break is. iOS hands the break to AlarmKit and reports nothing back, so
+  /// Blink works out from the schedule alone whether it is opening mid-break.
+  Duration? get breakRemaining {
+    final startedAt = _startedAt;
+    if (startedAt == null) return null;
+    final now = _clock();
+    final startedBreakAt = lastReminderAtOrBefore(startedAt, _interval, now);
+    if (startedBreakAt == null || startedBreakAt == _dismissedBreakAt) {
+      return null;
+    }
+    final endsAt = startedBreakAt.add(
+      Duration(seconds: _settings.lookAwaySeconds),
+    );
+    return endsAt.isAfter(now) ? endsAt.difference(now) : null;
+  }
+
+  /// Marks the running break as seen out, whether it was skipped or finished.
+  void dismissCurrentBreak() {
+    final startedAt = _startedAt;
+    if (startedAt == null) return;
+    _dismissedBreakAt = lastReminderAtOrBefore(startedAt, _interval, _clock());
+  }
 
   /// Loads settings and resumes the session that was running when the app
   /// last closed, if any.
@@ -60,6 +88,7 @@ class SessionService extends ChangeNotifier {
 
   Future<void> stop() async {
     _startedAt = null;
+    _dismissedBreakAt = null;
     await _notifier.cancelAll();
     await _settingsService.saveSessionStart(null);
     notifyListeners();
@@ -77,6 +106,7 @@ class SessionService extends ChangeNotifier {
 
   Future<void> _startSchedule() async {
     _startedAt = _clock();
+    _dismissedBreakAt = null;
     await _notifier.startRepeating(
       _interval,
       lookAwaySeconds: _settings.lookAwaySeconds,

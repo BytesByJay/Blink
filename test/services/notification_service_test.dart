@@ -1,5 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:blink/services/notification_service.dart';
 import 'package:blink/services/reminder_timer.dart';

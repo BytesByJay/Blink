@@ -97,4 +97,37 @@ void main() {
       expect(fired, 1);
     });
   });
+
+  group('lastReminderAtOrBefore', () {
+    final start = DateTime(2026, 1, 1, 12);
+    const interval = Duration(minutes: 20);
+
+    test('is null before the first reminder is due', () {
+      expect(
+        lastReminderAtOrBefore(start, interval, DateTime(2026, 1, 1, 12, 19)),
+        isNull,
+      );
+    });
+
+    test('is the reminder itself at the exact moment it is due', () {
+      expect(
+        lastReminderAtOrBefore(start, interval, DateTime(2026, 1, 1, 12, 20)),
+        DateTime(2026, 1, 1, 12, 20),
+      );
+    });
+
+    test('is the most recent reminder once several have gone by', () {
+      expect(
+        lastReminderAtOrBefore(start, interval, DateTime(2026, 1, 1, 13, 5)),
+        DateTime(2026, 1, 1, 13),
+      );
+    });
+
+    test('is null for a clock reading before the schedule started', () {
+      expect(
+        lastReminderAtOrBefore(start, interval, DateTime(2026, 1, 1, 11)),
+        isNull,
+      );
+    });
+  });
 }

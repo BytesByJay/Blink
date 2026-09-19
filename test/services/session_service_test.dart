@@ -138,4 +138,69 @@ void main() {
     expect(n.started, isEmpty);
     expect((await SettingsService().load()).intervalMinutes, 10);
   });
+
+  group('breakRemaining', () {
+    test('is null while no session is running', () async {
+      final svc = _session(FakeNotifier(), () => DateTime(2026, 1, 1, 12));
+
+      expect(svc.breakRemaining, isNull);
+    });
+
+    test('is null between breaks', () async {
+      var now = DateTime(2026, 1, 1, 12);
+      final svc = _session(FakeNotifier(), () => now);
+      await svc.start();
+
+      now = DateTime(2026, 1, 1, 12, 10);
+      expect(svc.breakRemaining, isNull);
+    });
+
+    test('counts down the look-away seconds once a break comes due', () async {
+      var now = DateTime(2026, 1, 1, 12);
+      final svc = _session(FakeNotifier(), () => now);
+      await svc.start();
+
+      now = DateTime(2026, 1, 1, 12, 20);
+      expect(svc.breakRemaining, const Duration(seconds: 20));
+      now = DateTime(2026, 1, 1, 12, 20, 15);
+      expect(svc.breakRemaining, const Duration(seconds: 5));
+    });
+
+    test('is null once the break has run out', () async {
+      var now = DateTime(2026, 1, 1, 12);
+      final svc = _session(FakeNotifier(), () => now);
+      await svc.start();
+
+      now = DateTime(2026, 1, 1, 12, 20, 20);
+      expect(svc.breakRemaining, isNull);
+    });
+
+    test('a dismissed break does not come back', () async {
+      var now = DateTime(2026, 1, 1, 12);
+      final svc = _session(FakeNotifier(), () => now);
+      await svc.start();
+
+      now = DateTime(2026, 1, 1, 12, 20, 5);
+      svc.dismissCurrentBreak();
+      expect(svc.breakRemaining, isNull);
+
+      // The next break is its own break, so it still counts down.
+      now = DateTime(2026, 1, 1, 12, 40, 5);
+      expect(svc.breakRemaining, const Duration(seconds: 15));
+    });
+
+    test('restarting the session clears a dismissal', () async {
+      var now = DateTime(2026, 1, 1, 12);
+      final svc = _session(FakeNotifier(), () => now);
+      await svc.start();
+
+      now = DateTime(2026, 1, 1, 12, 20, 5);
+      svc.dismissCurrentBreak();
+      now = DateTime(2026, 1, 1, 12, 30);
+      await svc.start();
+
+      now = DateTime(2026, 1, 1, 12, 50, 5);
+      expect(svc.breakRemaining, const Duration(seconds: 15));
+    });
+  });
 }

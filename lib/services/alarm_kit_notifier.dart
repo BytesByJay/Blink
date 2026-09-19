@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import 'notifier.dart';
+import 'reminder_timer.dart';
 
 export 'notifier.dart';
 
@@ -16,16 +17,23 @@ const kAlarmChannel = MethodChannel('blink/alarmkit');
 ///
 /// The break runs in system UI: the alarm alerts at break time, and its
 /// "Look away" button starts the countdown shown on the Lock Screen and
-/// Dynamic Island. Blink runs no in-app timer on iOS.
+/// Dynamic Island.
 class AlarmKitNotifier implements Notifier {
   AlarmKitNotifier({
     MethodChannel channel = kAlarmChannel,
     DateTime Function() clock = DateTime.now,
+    ReminderTimer? timer,
   }) : _channel = channel,
-       _clock = clock;
+       _clock = clock,
+       _timer = timer ?? ReminderTimer();
 
   final MethodChannel _channel;
   final DateTime Function() _clock;
+
+  /// Mirrors the alarm batch in-process. AlarmKit reports nothing back to
+  /// Blink, so without this a break that comes due with the app on screen
+  /// leaves the Look-Away screen shut and rolls into the next interval.
+  final ReminderTimer _timer;
   final _tapController = StreamController<void>.broadcast();
 
   /// Remembered from the last schedule so a top-up reuses the break length.
@@ -40,6 +48,7 @@ class AlarmKitNotifier implements Notifier {
       if (call.method == 'openedFromAlarm') _tapController.add(null);
       return null;
     });
+    _timer.onFired.listen((_) => _tapController.add(null));
   }
 
   @override
@@ -52,6 +61,7 @@ class AlarmKitNotifier implements Notifier {
     _lookAwaySeconds = lookAwaySeconds;
     await _channel.invokeMethod<void>('cancelAll');
     await _scheduleFrom(_clock(), interval, 0);
+    _timer.startNow(interval);
   }
 
   @override
@@ -79,11 +89,15 @@ class AlarmKitNotifier implements Notifier {
         ? 0
         : elapsed.inMicroseconds ~/ interval.inMicroseconds;
     await _scheduleFrom(startedAt, interval, done);
+    _timer.start(startedAt, interval);
     return true;
   }
 
   @override
-  Future<void> cancelAll() => _channel.invokeMethod<void>('cancelAll');
+  Future<void> cancelAll() {
+    _timer.cancel();
+    return _channel.invokeMethod<void>('cancelAll');
+  }
 
   /// The break happens in system UI, so opening the app is never required.
   @override

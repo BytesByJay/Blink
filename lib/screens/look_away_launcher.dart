@@ -10,14 +10,19 @@ class LookAwayLauncher {
   final VoidCallback? onChime;
   bool _open = false;
 
-  Future<void> show() async {
+  /// [remainingSeconds] shortens the countdown to what is left of a break
+  /// that is already under way; omit it to run a whole break.
+  Future<void> show({int? remainingSeconds}) async {
     final navigator = _navigatorKey.currentState;
     if (navigator == null || _open) return;
     _open = true;
     try {
       await navigator.push(
         MaterialPageRoute<void>(
-          builder: (_) => LookAwayScreen(onChime: onChime),
+          builder: (_) => LookAwayScreen(
+            onChime: onChime,
+            remainingSeconds: remainingSeconds,
+          ),
         ),
       );
     } finally {

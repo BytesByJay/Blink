@@ -1,6 +1,8 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:blink/services/alarm_kit_notifier.dart';
+import 'package:blink/services/reminder_timer.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -164,5 +166,87 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(taps, hasLength(1));
+  });
+
+  test('a break coming due with Blink open makes onTap emit', () {
+    fakeAsync((async) {
+      mockChannel();
+      final start = DateTime(2026, 1, 1, 12);
+      final svc = AlarmKitNotifier(
+        clock: () => start.add(async.elapsed),
+        timer: ReminderTimer(clock: () => start.add(async.elapsed)),
+      );
+      svc.init();
+      var taps = 0;
+      svc.onTap.listen((_) => taps++);
+
+      svc.startRepeating(
+        const Duration(minutes: 20),
+        lookAwaySeconds: 20,
+        sound: true,
+        vibration: true,
+      );
+
+      async.elapse(const Duration(minutes: 19, seconds: 59));
+      expect(taps, 0);
+      async.elapse(const Duration(seconds: 1));
+      expect(taps, 1);
+    });
+  });
+
+  test('a resumed batch keeps the original cadence in-app', () {
+    fakeAsync((async) {
+      mockChannel(respond: (call) => call.method == 'pendingCount' ? 5 : null);
+      // Resuming at 12:50 on a cadence that began at 12:00, so the next break
+      // in-app is 13:00 — ten minutes away, not twenty.
+      final start = DateTime(2026, 1, 1, 12, 50);
+      final svc = AlarmKitNotifier(
+        clock: () => start.add(async.elapsed),
+        timer: ReminderTimer(clock: () => start.add(async.elapsed)),
+      );
+      svc.init();
+      var taps = 0;
+      svc.onTap.listen((_) => taps++);
+
+      svc.resumeRepeating(
+        DateTime(2026, 1, 1, 12),
+        const Duration(minutes: 20),
+        lookAwaySeconds: 20,
+        sound: true,
+        vibration: true,
+      );
+
+      async.elapse(const Duration(minutes: 9, seconds: 59));
+      expect(taps, 0);
+      async.elapse(const Duration(seconds: 1));
+      expect(taps, 1);
+    });
+  });
+
+  test('cancelAll stops the in-app break timer too', () {
+    fakeAsync((async) {
+      mockChannel();
+      final start = DateTime(2026, 1, 1, 12);
+      final svc = AlarmKitNotifier(
+        clock: () => start.add(async.elapsed),
+        timer: ReminderTimer(clock: () => start.add(async.elapsed)),
+      );
+      svc.init();
+      var taps = 0;
+      svc.onTap.listen((_) => taps++);
+
+      svc.startRepeating(
+        const Duration(minutes: 20),
+        lookAwaySeconds: 20,
+        sound: true,
+        vibration: true,
+      );
+      async.flushMicrotasks();
+      svc.cancelAll();
+      async.flushMicrotasks();
+      async.elapse(const Duration(hours: 1));
+
+      expect(taps, 0);
+    });
   });
 }

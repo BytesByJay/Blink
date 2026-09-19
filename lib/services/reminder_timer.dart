@@ -13,6 +13,19 @@ DateTime nextReminderAfter(
   return startedAt.add(interval * (done + 1));
 }
 
+/// The most recent reminder due at or before [at], or null when none has come
+/// due yet, for a schedule that repeats every [interval] from [startedAt].
+DateTime? lastReminderAtOrBefore(
+  DateTime startedAt,
+  Duration interval,
+  DateTime at,
+) {
+  final elapsed = at.difference(startedAt);
+  if (elapsed.isNegative) return null;
+  final done = elapsed.inMicroseconds ~/ interval.inMicroseconds;
+  return done == 0 ? null : startedAt.add(interval * done);
+}
+
 /// Fires [onFired] every interval after a start time until cancelled.
 ///
 /// Browsers pause timers while the computer sleeps, so a periodic wall-clock

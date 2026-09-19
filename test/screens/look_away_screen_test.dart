@@ -91,4 +91,58 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Skip'), findsNothing);
   });
+
+  testWidgets('opening mid-break starts from the time left, not the full '
+      'break', (t) async {
+    SharedPreferences.setMockInitialValues({'lookAwaySeconds': 20});
+    final svc = SessionService(
+      notifier: FakeNotifier(),
+      settingsService: SettingsService(),
+    );
+    await svc.loadSettings();
+
+    await t.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: svc,
+        child: const MaterialApp(home: LookAwayScreen(remainingSeconds: 3)),
+      ),
+    );
+
+    expect(find.text('3'), findsOneWidget);
+    // The ring still reads against the whole break, so resuming picks it up
+    // part-filled rather than starting empty.
+    expect(t.widget<CountdownRing>(find.byType(CountdownRing)).progress,
+        closeTo(17 / 20, 0.001));
+    await t.pump(const Duration(seconds: 1));
+    expect(find.text('2'), findsOneWidget);
+    await t.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('seeing the break out dismisses it, so a resume does not '
+      'reopen it', (t) async {
+    SharedPreferences.setMockInitialValues({'lookAwaySeconds': 20});
+    var now = DateTime(2026, 1, 1, 12);
+    final svc = SessionService(
+      notifier: FakeNotifier(),
+      settingsService: SettingsService(),
+      clock: () => now,
+    );
+    await svc.start();
+
+    // Five seconds into the break that came due at 12:20.
+    now = DateTime(2026, 1, 1, 12, 20, 5);
+    expect(svc.breakRemaining, const Duration(seconds: 15));
+
+    await t.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: svc,
+        child: const MaterialApp(home: LookAwayScreen(remainingSeconds: 15)),
+      ),
+    );
+    await t.tap(find.text('Skip'));
+    await t.pump();
+
+    expect(svc.breakRemaining, isNull);
+    await t.pump(const Duration(seconds: 20));
+  });
 }

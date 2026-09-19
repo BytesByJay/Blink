@@ -6,7 +6,12 @@ import '../widgets/countdown_ring.dart';
 
 class LookAwayScreen extends StatefulWidget {
   final VoidCallback? onChime;
-  const LookAwayScreen({super.key, this.onChime});
+
+  /// Time left in a break already under way, for when Blink is opened partway
+  /// through one. Null starts a whole break.
+  final int? remainingSeconds;
+
+  const LookAwayScreen({super.key, this.onChime, this.remainingSeconds});
 
   @override
   State<LookAwayScreen> createState() => _LookAwayScreenState();
@@ -22,7 +27,7 @@ class _LookAwayScreenState extends State<LookAwayScreen> {
   void initState() {
     super.initState();
     _total = context.read<SessionService>().settings.lookAwaySeconds;
-    _remaining = _total;
+    _remaining = widget.remainingSeconds ?? _total;
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _remaining--);
@@ -31,7 +36,7 @@ class _LookAwayScreenState extends State<LookAwayScreen> {
         _done = true;
         widget.onChime?.call();
         Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) Navigator.of(context).maybePop();
+          if (mounted) _dismiss();
         });
       }
     });
@@ -43,9 +48,18 @@ class _LookAwayScreenState extends State<LookAwayScreen> {
     super.dispose();
   }
 
+  /// Both leaving early and sitting the break out end it for good, so coming
+  /// back to Blink before the next interval does not put this screen up again.
+  void _dismiss() {
+    context.read<SessionService>().dismissCurrentBreak();
+    Navigator.of(context).maybePop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final progress = _total == 0 ? 1.0 : (_total - _remaining) / _total;
+    final progress = _total == 0
+        ? 1.0
+        : ((_total - _remaining) / _total).clamp(0.0, 1.0);
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: SafeArea(
@@ -64,9 +78,11 @@ class _LookAwayScreenState extends State<LookAwayScreen> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                child: const Text('Skip',
-                    style: TextStyle(color: Colors.white70)),
+                onPressed: _dismiss,
+                child: const Text(
+                  'Skip',
+                  style: TextStyle(color: Colors.white70),
+                ),
               ),
               const SizedBox(height: 24),
             ],
